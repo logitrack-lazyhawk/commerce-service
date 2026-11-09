@@ -86,6 +86,11 @@
             <artifactId>spring-boot-starter-webmvc-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.mercadopago</groupId>
+            <artifactId>sdk-java</artifactId>
+            <version>2.1.7</version> <!-- Busca la última versión estable -->
+        </dependency>
     </dependencies>
     <dependencyManagement>
         <dependencies>
