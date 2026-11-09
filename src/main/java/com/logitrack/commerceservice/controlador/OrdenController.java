@@ -1,5 +1,6 @@
 package com.logitrack.commerceservice.controlador;
 
+import com.logitrack.commerceservice.dominio.dto.PagoResponseDto;
 import com.logitrack.commerceservice.dominio.entidad.Orden;
 import com.logitrack.commerceservice.servicio.OrdenServicio;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,7 @@ public class OrdenController {
     }
 
     @PatchMapping("/{ordenId}/pagar")
-    public ResponseEntity<Orden> pagarOrden(@PathVariable UUID ordenId) {
+    public ResponseEntity<PagoResponseDto> pagarOrden(@PathVariable UUID ordenId) {
         return ResponseEntity.ok(ordenServicio.pagarOrden(ordenId));
     }
 }

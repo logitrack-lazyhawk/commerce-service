@@ -1,11 +1,13 @@
 package com.logitrack.commerceservice.servicio.impl;
 
+import com.logitrack.commerceservice.dominio.dto.PagoResponseDto;
 import com.logitrack.commerceservice.dominio.entidad.Carrito;
 import com.logitrack.commerceservice.dominio.entidad.Orden;
 import com.logitrack.commerceservice.repositorio.CarritoRepository;
 import com.logitrack.commerceservice.repositorio.OrdenRepository;
 import com.logitrack.commerceservice.servicio.OrdenServicio;
 import com.logitrack.commerceservice.servicio.cliente.ShipmentClient;
+import com.logitrack.commerceservice.servicio.pago.MercadoPagoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,7 @@ public class OrdenServicioImpl implements OrdenServicio {
     private final OrdenRepository ordenRepository;
     private final CarritoRepository carritoRepository;
     private final ShipmentClient shipmentClient;
+    private final MercadoPagoService mercadoPagoService; // <-- NUEVO
 
     @Override
     @Transactional
@@ -46,7 +49,7 @@ public class OrdenServicioImpl implements OrdenServicio {
 
     @Override
     @Transactional
-    public Orden pagarOrden(UUID ordenId) {
+    public PagoResponseDto pagarOrden(UUID ordenId) {
         // 1. Buscar la orden
         Orden orden = ordenRepository.findById(ordenId)
                 .orElseThrow(() -> new IllegalArgumentException("Orden no encontrada"));
@@ -55,21 +58,19 @@ public class OrdenServicioImpl implements OrdenServicio {
             throw new IllegalArgumentException("La orden ya fue procesada");
         }
 
-        // 2. Simular el pago (aquí luego irá Mercado Pago)
-        orden.setEstado(Orden.EstadoOrden.PAGADA);
+        // 2. Generar la preferencia de pago en Mercado Pago
+        String initPoint = mercadoPagoService.crearPreferenciaPago(
+                orden.getId(),
+                orden.getTotal(),
+                "Compra en LogiTrack - Orden " + orden.getId().toString().substring(0, 8)
+        );
 
-        // 3. Crear el envío en el shipment-service (Pasamos el usuarioId como clienteId)
-        UUID envioId = shipmentClient.crearEnvio(orden.getId(), orden.getUsuarioId(), orden.getDireccionDestino());
-        orden.setEnvioId(envioId);
-        orden.setEstado(Orden.EstadoOrden.ENVIADA);
-
-        // 4. Vaciar el carrito
-        Carrito carrito = carritoRepository.findByUsuarioId(orden.getUsuarioId())
-                .orElseThrow(() -> new IllegalArgumentException("Carrito no encontrado"));
-        carrito.getItems().clear();
-        carrito.setTotal(java.math.BigDecimal.ZERO);
-        carritoRepository.save(carrito);
-
-        return ordenRepository.save(orden);
+        // 3. Devolver el DTO con el init_point
+        // NOTA: La orden NO se marca como PAGADA aquí. Eso lo hará el webhook (F22).
+        return new PagoResponseDto(
+                orden.getId(),
+                initPoint,
+                "Preferencia de pago creada exitosamente. Redirigir al usuario a la URL."
+        );
     }
 }
