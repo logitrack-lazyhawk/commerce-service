@@ -7,6 +7,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.HttpClientErrorException; // <-- IMPORTANTE
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -46,6 +47,7 @@ public class GlobalExceptionHandler {
         body.put("message", "Ocurrió un error inesperado en el servidor.");
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
     /**
      * Captura errores de validación de campos (ej. @NotNull, @Min fallidos).
      */
@@ -76,6 +78,20 @@ public class GlobalExceptionHandler {
         body.put("status", HttpStatus.BAD_REQUEST.value());
         body.put("error", "Malformed JSON Request");
         body.put("message", "El cuerpo de la petición no tiene un formato válido. Verifica los tipos de datos (ej. UUIDs).");
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * Captura errores 404 de servicios externos (ej. shipment-service no encontró el cliente).
+     * Devuelve un HTTP 400 Bad Request con el mensaje del servicio externo.
+     */
+    @ExceptionHandler(HttpClientErrorException.NotFound.class)
+    public ResponseEntity<Map<String, Object>> handleNotFoundFromExternalService(HttpClientErrorException.NotFound ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Error de Validación Externa");
+        body.put("message", "El servicio externo rechazó la petición: " + ex.getResponseBodyAsString());
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 }
